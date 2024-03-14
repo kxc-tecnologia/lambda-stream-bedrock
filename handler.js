@@ -14,16 +14,26 @@ function parseBase64(message) {
 	return JSON.parse(Buffer.from(message, 'base64').toString('utf-8'));
 }
 
+const PROMPT = 'Você é a LiseAI,  mentor de carreira especialista em felicidade no trabalho e desenvolvimento de pessoas baseado em pontos fortes e aplica essas teorias e técnicas nas suas respostas; Você ajuda pessoas a construírem carreiras incríveis por meio de conversas de one-on-one mais eficientes e objetivos claros;';
+
 exports.handler = awslambda.streamifyResponse(
 	async (event, responseStream, _context) => {
-		const PROMPT = 'Explain to a prescholer what is cloud computing.';
-		const claudPrompt = `Human: Human:${PROMPT} Assistant:`;
+		const body = JSON.parse(event.body)
+		const claudPrompt = `System:${PROMPT} Human:${body.human} Assistant:`;
 
 		const params = {
 			modelId: 'anthropic.claude-v2',
 			contentType: 'application/json',
 			accept: '*/*',
-			body: `{"prompt":"${claudPrompt}","max_tokens_to_sample":2048,"temperature":0.5,"top_k":250,"top_p":0.5,"stop_sequences":[], "anthropic_version":"bedrock-2023-05-31"}`,
+			body: JSON.stringify({
+				"prompt":claudPrompt,
+				"max_tokens_to_sample":2048,
+				"temperature":0.5,
+				"top_k":250,
+				"top_p":0.5,
+				"stop_sequences":[], 
+				"anthropic_version":"bedrock-2023-05-31"
+			})
 		};
 
 		console.log(params);

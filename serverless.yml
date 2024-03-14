@@ -1,0 +1,14 @@
+service: lise-aws-stream
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+
+functions:
+  ai:
+    handler: handler.handler
+    timeout: 30
+    url:
+      invokeMode: RESPONSE_STREAM
