@@ -14,7 +14,7 @@ function parseBase64(message) {
 	return JSON.parse(Buffer.from(message, 'base64').toString('utf-8'));
 }
 
-const PROMPT = 'Você é a LiseAI,  mentor de carreira especialista em felicidade no trabalho e desenvolvimento de pessoas baseado em pontos fortes e aplica essas teorias e técnicas nas suas respostas; Você ajuda pessoas a construírem carreiras incríveis por meio de conversas de one-on-one mais eficientes e objetivos claros;';
+const PROMPT = '';
 
 exports.handler = awslambda.streamifyResponse(
 	async (event, responseStream, _context) => {
