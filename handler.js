@@ -6,6 +6,7 @@ const pipeline = util.promisify(stream.pipeline);
 const {
 	BedrockRuntimeClient,
 	InvokeModelWithResponseStreamCommand,
+	InvokeModelCommand
 } = require('@aws-sdk/client-bedrock-runtime'); // ES Modules import
 
 const bedrock = new BedrockRuntimeClient({ region: 'us-east-1' });
@@ -19,37 +20,88 @@ const PROMPT = '';
 exports.handler = awslambda.streamifyResponse(
 	async (event, responseStream, _context) => {
 		const body = JSON.parse(event.body)
-		const claudPrompt = `System:${PROMPT} Human:${body.human} Assistant:`;
+		const claudPrompt = `System:${PROMPT}\n\nHuman:${body.human}\n\nAssistant:`;
 
-		const params = {
-			modelId: 'anthropic.claude-v2',
-			contentType: 'application/json',
-			accept: '*/*',
-			body: JSON.stringify({
-				"prompt":claudPrompt,
-				"max_tokens_to_sample":2048,
-				"temperature":0.5,
-				"top_k":250,
-				"top_p":0.5,
-				"stop_sequences":[], 
-				"anthropic_version":"bedrock-2023-05-31"
-			})
+		const input = {
+		  modelId: "anthropic.claude-3-sonnet-20240229-v1:0",
+		  contentType: "application/json",
+		  accept: "application/json",
+		  body: JSON.stringify({
+		    anthropic_version: "bedrock-2023-05-31",
+		    max_tokens: 1000,
+		    messages: [
+		      {
+		        role: "user",
+		        content: [
+		          {
+		            type: "text",
+		            text: claudPrompt,
+		          },
+		        ],
+		      },
+		    ],
+		  }),
 		};
+		
+		
+		
+		console.log(input);
 
-		console.log(params);
-
-		const command = new InvokeModelWithResponseStreamCommand(params);
+		const command = new InvokeModelWithResponseStreamCommand(input);
 
 		const response = await bedrock.send(command);
-		const chunks = [];
-
-		for await (const chunk of response.body) {
-			const parsed = parseBase64(chunk.chunk.bytes);
-			chunks.push(parsed.completion);
-			responseStream.write(parsed.completion);
+		let completeMessage = "";
+		console.log(response)
+		for await (const item of response.body) {
+			const chunk = JSON.parse(new TextDecoder().decode(item.chunk.bytes));
+	    	const chunk_type = chunk.type;
+	
+		    if (chunk_type === "content_block_delta") {
+		      const text = chunk.delta.text;
+		      completeMessage = completeMessage + text;
+		      
+		      responseStream.write(text);
+		    }
 		}
 
-		console.log(chunks.join(''));
 		responseStream.end();
 	}
 );
+
+exports.handler2 = async (event,  _context) => {
+	const body = JSON.parse(event.body)
+	const claudPrompt = `System:${PROMPT}\n\nHuman:${body.human}\n\nAssistant:`;
+
+	const input = {
+		modelId: "anthropic.claude-3-sonnet-20240229-v1:0",
+		contentType: "application/json",
+		accept: "application/json",
+		body: JSON.stringify({
+		anthropic_version: "bedrock-2023-05-31",
+		max_tokens: 1000,
+		messages: [
+			{
+			role: "user",
+			content: [
+				{
+				type: "text",
+				text: claudPrompt,
+				},
+			],
+			},
+		],
+		}),
+	};
+	
+	
+	
+	console.log(input);
+
+	const command = new InvokeModel(input);
+
+	const response = await bedrock.send(command);
+	
+	console.log(response)
+
+	return response
+}

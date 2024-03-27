@@ -1,14 +1,25 @@
-service: lise-aws-stream
+service: teste-kxc
 
 frameworkVersion: '3'
 
 provider:
   name: aws
   runtime: nodejs18.x
+  iamRoleStatements: 
+    - Effect: "Allow"        
+      Action:
+        - bedrock:InvokeModel      
+        - bedrock:InvokeModelWithResponseStream      
+      Resource: 
+        - "*"
 
 functions:
-  ai:
+  ai-stream:
     handler: handler.handler
     timeout: 30
     url:
       invokeMode: RESPONSE_STREAM
+  ai:
+    handler: handler.handler2
+    timeout: 30
+    url: true

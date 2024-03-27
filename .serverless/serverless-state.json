@@ -1,12 +1,24 @@
 {
   "service": {
-    "service": "lise-aws-stream",
+    "service": "teste-kxc",
     "serviceObject": {
-      "name": "lise-aws-stream"
+      "name": "teste-kxc"
     },
     "provider": {
       "name": "aws",
       "runtime": "nodejs18.x",
+      "iamRoleStatements": [
+        {
+          "Effect": "Allow",
+          "Action": [
+            "bedrock:InvokeModel",
+            "bedrock:InvokeModelWithResponseStream"
+          ],
+          "Resource": [
+            "*"
+          ]
+        }
+      ],
       "stage": "dev",
       "region": "us-east-1",
       "versionFunctions": true,
@@ -83,10 +95,16 @@
               }
             }
           },
+          "AiDashstreamLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/teste-kxc-dev-ai-stream"
+            }
+          },
           "AiLogGroup": {
             "Type": "AWS::Logs::LogGroup",
             "Properties": {
-              "LogGroupName": "/aws/lambda/lise-aws-stream-dev-ai"
+              "LogGroupName": "/aws/lambda/teste-kxc-dev-ai"
             }
           },
           "IamRoleLambdaExecution": {
@@ -114,7 +132,7 @@
                     "Fn::Join": [
                       "-",
                       [
-                        "lise-aws-stream",
+                        "teste-kxc",
                         "dev",
                         "lambda"
                       ]
@@ -132,7 +150,7 @@
                         ],
                         "Resource": [
                           {
-                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/lise-aws-stream-dev*:*"
+                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/teste-kxc-dev*:*"
                           }
                         ]
                       },
@@ -143,9 +161,12 @@
                         ],
                         "Resource": [
                           {
-                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/lise-aws-stream-dev*:*:*"
+                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/teste-kxc-dev*:*:*"
                           }
                         ]
+                      },
+                      {
+                        "$ref": "$[\"service\"][\"provider\"][\"iamRoleStatements\"][0]"
                       }
                     ]
                   }
@@ -156,7 +177,7 @@
                 "Fn::Join": [
                   "-",
                   [
-                    "lise-aws-stream",
+                    "teste-kxc",
                     "dev",
                     {
                       "Ref": "AWS::Region"
@@ -167,6 +188,31 @@
               }
             }
           },
+          "AiDashstreamLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": {
+                  "Ref": "ServerlessDeploymentBucket"
+                },
+                "S3Key": "serverless/teste-kxc/dev/1711561995891-2024-03-27T17:53:15.891Z/teste-kxc.zip"
+              },
+              "Handler": "handler.handler",
+              "Runtime": "nodejs18.x",
+              "FunctionName": "teste-kxc-dev-ai-stream",
+              "MemorySize": 1024,
+              "Timeout": 30,
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "AiDashstreamLogGroup"
+            ]
+          },
           "AiLambdaFunction": {
             "Type": "AWS::Lambda::Function",
             "Properties": {
@@ -174,11 +220,11 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/lise-aws-stream/dev/1709749509657-2024-03-06T18:25:09.657Z/lise-aws-stream.zip"
+                "S3Key": "serverless/teste-kxc/dev/1711561995891-2024-03-27T17:53:15.891Z/teste-kxc.zip"
               },
-              "Handler": "handler.handler",
+              "Handler": "handler.handler2",
               "Runtime": "nodejs18.x",
-              "FunctionName": "lise-aws-stream-dev-ai",
+              "FunctionName": "teste-kxc-dev-ai",
               "MemorySize": 1024,
               "Timeout": 30,
               "Role": {
@@ -192,14 +238,48 @@
               "AiLogGroup"
             ]
           },
-          "AiLambdaVersionI7dnzTQtio58ZSIm6MQdtDF7k9cp6UHpjJ1RlFsx0vQ": {
+          "AiDashstreamLambdaVersionldxO2tA9Ow4MxkT0MofsgN0uCZA1hfI87mSYAjmUHEM": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "AiDashstreamLambdaFunction"
+              },
+              "CodeSha256": "QmytACPgscb5LssUcX9/VggrBum4gK3/8bV2Nq/Dpug="
+            }
+          },
+          "AiDashstreamLambdaFunctionUrl": {
+            "Type": "AWS::Lambda::Url",
+            "Properties": {
+              "AuthType": "NONE",
+              "TargetFunctionArn": {
+                "Fn::GetAtt": [
+                  "AiDashstreamLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "InvokeMode": "RESPONSE_STREAM"
+            }
+          },
+          "AiDashstreamLambdaPermissionFnUrl": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"AiDashstreamLambdaFunctionUrl\"][\"Properties\"][\"TargetFunctionArn\"]"
+              },
+              "Action": "lambda:InvokeFunctionUrl",
+              "Principal": "*",
+              "FunctionUrlAuthType": "NONE"
+            }
+          },
+          "AiLambdaVersionwsBZRv4sIbI7Gs57yO1FPGHUYMKjLpgPsqEcGBtmcbw": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "AiLambdaFunction"
               },
-              "CodeSha256": "sT/D1cR+jlBcehSQcb1kZTq2EOGy9JiORCNReXIoQI0="
+              "CodeSha256": "QmytACPgscb5LssUcX9/VggrBum4gK3/8bV2Nq/Dpug="
             }
           },
           "AiLambdaFunctionUrl": {
@@ -211,8 +291,7 @@
                   "AiLambdaFunction",
                   "Arn"
                 ]
-              },
-              "InvokeMode": "RESPONSE_STREAM"
+              }
             }
           },
           "AiLambdaPermissionFnUrl": {
@@ -233,16 +312,37 @@
               "Ref": "ServerlessDeploymentBucket"
             },
             "Export": {
-              "Name": "sls-lise-aws-stream-dev-ServerlessDeploymentBucketName"
+              "Name": "sls-teste-kxc-dev-ServerlessDeploymentBucketName"
+            }
+          },
+          "AiDashstreamLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "AiDashstreamLambdaVersionldxO2tA9Ow4MxkT0MofsgN0uCZA1hfI87mSYAjmUHEM"
+            },
+            "Export": {
+              "Name": "sls-teste-kxc-dev-AiDashstreamLambdaFunctionQualifiedArn"
+            }
+          },
+          "AiDashstreamLambdaFunctionUrl": {
+            "Description": "Lambda Function URL",
+            "Value": {
+              "Fn::GetAtt": [
+                "AiDashstreamLambdaFunctionUrl",
+                "FunctionUrl"
+              ]
+            },
+            "Export": {
+              "Name": "sls-teste-kxc-dev-AiDashstreamLambdaFunctionUrl"
             }
           },
           "AiLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "AiLambdaVersionI7dnzTQtio58ZSIm6MQdtDF7k9cp6UHpjJ1RlFsx0vQ"
+              "Ref": "AiLambdaVersionwsBZRv4sIbI7Gs57yO1FPGHUYMKjLpgPsqEcGBtmcbw"
             },
             "Export": {
-              "Name": "sls-lise-aws-stream-dev-AiLambdaFunctionQualifiedArn"
+              "Name": "sls-teste-kxc-dev-AiLambdaFunctionQualifiedArn"
             }
           },
           "AiLambdaFunctionUrl": {
@@ -254,7 +354,7 @@
               ]
             },
             "Export": {
-              "Name": "sls-lise-aws-stream-dev-AiLambdaFunctionUrl"
+              "Name": "sls-teste-kxc-dev-AiLambdaFunctionUrl"
             }
           }
         }
@@ -345,25 +445,37 @@
     },
     "pluginsData": {},
     "functions": {
-      "ai": {
+      "ai-stream": {
         "handler": "handler.handler",
         "timeout": 30,
         "url": {
           "invokeMode": "RESPONSE_STREAM"
         },
         "events": [],
-        "name": "lise-aws-stream-dev-ai",
+        "name": "teste-kxc-dev-ai-stream",
         "package": {},
         "memory": 1024,
         "runtime": "nodejs18.x",
         "vpc": {},
-        "versionLogicalId": "AiLambdaVersionI7dnzTQtio58ZSIm6MQdtDF7k9cp6UHpjJ1RlFsx0vQ"
+        "versionLogicalId": "AiDashstreamLambdaVersionldxO2tA9Ow4MxkT0MofsgN0uCZA1hfI87mSYAjmUHEM"
+      },
+      "ai": {
+        "handler": "handler.handler2",
+        "timeout": 30,
+        "url": true,
+        "events": [],
+        "name": "teste-kxc-dev-ai",
+        "package": {},
+        "memory": 1024,
+        "runtime": "nodejs18.x",
+        "vpc": {},
+        "versionLogicalId": "AiLambdaVersionwsBZRv4sIbI7Gs57yO1FPGHUYMKjLpgPsqEcGBtmcbw"
       }
     },
     "configValidationMode": "warn",
     "serviceFilename": "serverless.yml",
     "initialServerlessConfig": {
-      "service": "lise-aws-stream",
+      "service": "teste-kxc",
       "frameworkVersion": "3",
       "provider": {
         "$ref": "$[\"service\"][\"provider\"]"
@@ -374,10 +486,10 @@
     },
     "layers": {},
     "isDashboardMonitoringPreconfigured": false,
-    "artifact": "/home/delano/Documents/trabalho/kxc/projetos/digha/stream-bedrock-lambda/.serverless/lise-aws-stream.zip"
+    "artifact": "/home/delano/Documents/trabalho/kxc/projetos/digha/stream-bedrock-lambda/.serverless/teste-kxc.zip"
   },
   "package": {
-    "artifactDirectoryName": "serverless/lise-aws-stream/dev/1709749509657-2024-03-06T18:25:09.657Z",
-    "artifact": "lise-aws-stream.zip"
+    "artifactDirectoryName": "serverless/teste-kxc/dev/1711561995891-2024-03-27T17:53:15.891Z",
+    "artifact": "teste-kxc.zip"
   }
 }
